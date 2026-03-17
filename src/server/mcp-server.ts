@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createFcpServer } from "@aetherwing/fcp-core";
+import { createFcpServer } from "@os-tack/fcp-core";
 import { DrawioAdapter } from "../adapter.js";
 import { DRAWIO_VERB_SPECS } from "../verb-specs.js";
 import { IntentLayer } from "./intent-layer.js";

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { EventLog } from "@aetherwing/fcp-core";
-import type { ParsedOp } from "@aetherwing/fcp-core";
+import { EventLog } from "@os-tack/fcp-core";
+import type { ParsedOp } from "@os-tack/fcp-core";
 import { DrawioAdapter } from "./adapter.js";
 import type { DiagramEvent } from "./types/index.js";
 
@@ -126,7 +126,7 @@ describe("DrawioAdapter", () => {
     expect(page.shapes.get(shape.id)?.label).toBe("ToReplay");
   });
 
-  it("EventLog from @aetherwing/fcp-core works with DiagramEvent", () => {
+  it("EventLog from @os-tack/fcp-core works with DiagramEvent", () => {
     const log = new EventLog<DiagramEvent>();
     const adapter = new DrawioAdapter();
     const model = adapter.createEmpty("Test", {});

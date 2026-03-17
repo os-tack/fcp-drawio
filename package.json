@@ -1,5 +1,5 @@
 {
-  "name": "@aetherwing/fcp-drawio",
+  "name": "@os-tack/fcp-drawio",
   "version": "0.2.11",
   "description": "MCP server for creating and editing draw.io diagrams through intent-level commands",
   "type": "module",
@@ -25,7 +25,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@aetherwing/fcp-core": "^0.1.18",
+    "@os-tack/fcp-core": "^0.1.18",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "elkjs": "^0.11.0",
     "fast-xml-parser": "^4.5.1"
@@ -41,7 +41,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aetherwing-io/fcp-drawio"
+    "url": "https://github.com/os-tack/fcp-drawio"
   },
   "keywords": [
     "drawio",

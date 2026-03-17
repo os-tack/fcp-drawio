@@ -6,6 +6,6 @@
   "author": {
     "name": "Scott Meyer"
   },
-  "repository": "https://github.com/aetherwing-io/fcp-drawio",
+  "repository": "https://github.com/os-tack/fcp-drawio",
   "keywords": ["drawio", "diagrams", "architecture", "mcp"]
 }

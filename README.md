@@ -4,12 +4,12 @@ MCP server for creating and editing draw.io diagrams through intent-level comman
 
 ## What It Does
 
-fcp-drawio lets LLMs build architecture diagrams, flowcharts, and system maps by describing what they want -- not how to draw it. The LLM sends high-level operations like `add svc AuthService theme:blue` and `connect AuthService -> UserDB`, and fcp-drawio renders them into fully styled draw.io XML with automatic layout via ELK. Built on the [FCP](https://github.com/aetherwing-io/fcp) framework.
+fcp-drawio lets LLMs build architecture diagrams, flowcharts, and system maps by describing what they want -- not how to draw it. The LLM sends high-level operations like `add svc AuthService theme:blue` and `connect AuthService -> UserDB`, and fcp-drawio renders them into fully styled draw.io XML with automatic layout via ELK. Built on the [FCP](https://github.com/os-tack/fcp) framework.
 
 <p align="center">
   <img src="docs/images/multiplayer-game-backend.png" alt="Multiplayer Game Backend architecture diagram" width="700">
   <br>
-  <em>Multiplayer game backend — 20 nodes, 5 swim lanes, auto-layout (<a href="https://app.diagrams.net/#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Faetherwing-io%2Ffcp-drawio%2Fmain%2Fdocs%2Fexamples%2Fmultiplayer-game-backend.drawio">open in draw.io</a>)</em>
+  <em>Multiplayer game backend — 20 nodes, 5 swim lanes, auto-layout (<a href="https://app.diagrams.net/#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fos-tack%2Ffcp-drawio%2Fmain%2Fdocs%2Fexamples%2Fmultiplayer-game-backend.drawio">open in draw.io</a>)</em>
 </p>
 
 ## Quick Example
@@ -68,7 +68,7 @@ Apply color themes to any shape: `blue`, `green`, `red`, `orange`, `purple`, `ye
 Requires Node >= 22.
 
 ```bash
-npm install @aetherwing/fcp-drawio
+npm install @os-tack/fcp-drawio
 ```
 
 ### MCP Client Configuration
@@ -78,7 +78,7 @@ npm install @aetherwing/fcp-drawio
   "mcpServers": {
     "drawio": {
       "command": "node",
-      "args": ["node_modules/@aetherwing/fcp-drawio/dist/index.js"]
+      "args": ["node_modules/@os-tack/fcp-drawio/dist/index.js"]
     }
   }
 }
