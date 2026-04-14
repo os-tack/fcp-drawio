@@ -68,7 +68,7 @@ Apply color themes to any shape: `blue`, `green`, `red`, `orange`, `purple`, `ye
 Requires Node >= 22.
 
 ```bash
-npm install @os-tack/fcp-drawio
+npm install @ostk-ai/fcp-drawio
 ```
 
 ### MCP Client Configuration
@@ -78,7 +78,7 @@ npm install @os-tack/fcp-drawio
   "mcpServers": {
     "drawio": {
       "command": "node",
-      "args": ["node_modules/@os-tack/fcp-drawio/dist/index.js"]
+      "args": ["node_modules/@ostk-ai/fcp-drawio/dist/index.js"]
     }
   }
 }

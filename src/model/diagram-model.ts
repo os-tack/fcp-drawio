@@ -3,7 +3,7 @@ import type {
   StyleSet, EdgeStyleSet, ShapeType, ArrowType, ThemeName,
   DiagramEvent, CustomType, CustomTheme, Badge, FlowDirection,
 } from "../types/index.js";
-import { EventLog } from "@os-tack/fcp-core";
+import { EventLog } from "@ostk-ai/fcp-core";
 import { nextShapeId, nextEdgeId, nextGroupId, nextPageId, nextLayerId, nextSequence } from "./id.js";
 import { createDefaultStyle, createDefaultEdgeStyle } from "./defaults.js";
 import { ReferenceRegistry } from "./reference-registry.js";

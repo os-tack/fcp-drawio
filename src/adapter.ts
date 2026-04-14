@@ -1,6 +1,6 @@
-import type { FcpDomainAdapter, OpResult, QueryResult } from "@os-tack/fcp-core";
-import { EventLog } from "@os-tack/fcp-core";
-import type { ParsedOp } from "@os-tack/fcp-core";
+import type { FcpDomainAdapter, OpResult, QueryResult } from "@ostk-ai/fcp-core";
+import { EventLog } from "@ostk-ai/fcp-core";
+import type { ParsedOp } from "@ostk-ai/fcp-core";
 import type { Diagram, DiagramEvent } from "./types/index.js";
 import { DiagramModel } from "./model/diagram-model.js";
 import { IntentLayer } from "./server/intent-layer.js";

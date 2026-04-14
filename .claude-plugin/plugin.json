@@ -1,7 +1,7 @@
 {
   "name": "fcp-drawio",
   "description": "Create and edit draw.io diagrams through intent-level commands",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "license": "MIT",
   "author": {
     "name": "Scott Meyer"

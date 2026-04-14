@@ -1,5 +1,5 @@
 /**
- * Re-export tokenizer functions from @os-tack/fcp-core.
+ * Re-export tokenizer functions from @ostk-ai/fcp-core.
  * This file previously contained a local implementation that is now
  * provided by the framework.
  */
@@ -12,4 +12,4 @@ export {
   parseKeyValueWithMeta,
   isArrow,
   isSelector,
-} from "@os-tack/fcp-core";
+} from "@ostk-ai/fcp-core";
