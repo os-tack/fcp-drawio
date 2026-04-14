@@ -1,4 +1,4 @@
-import type { VerbSpec } from "@aetherwing/fcp-core";
+import type { VerbSpec } from "@ostk-ai/fcp-core";
 
 /**
  * All verb specifications for the drawio FCP domain.

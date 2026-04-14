@@ -1,11 +1,11 @@
 {
   "name": "fcp-drawio",
   "description": "Create and edit draw.io diagrams through intent-level commands",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "license": "MIT",
   "author": {
     "name": "Scott Meyer"
   },
-  "repository": "https://github.com/aetherwing-io/fcp-drawio",
+  "repository": "https://github.com/os-tack/fcp-drawio",
   "keywords": ["drawio", "diagrams", "architecture", "mcp"]
 }
