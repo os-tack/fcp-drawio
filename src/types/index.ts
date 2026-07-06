@@ -208,29 +208,27 @@ export interface Diagram {
 
 // ── Events ───────────────────────────────────────────────────
 
+// `pageId` records which page a shape/edge/group event happened on, so undo/
+// redo can resolve the right page even if the active page has since changed
+// (page switch itself emits no event). Optional for backward compatibility
+// with hand-constructed events (e.g. in tests); reverseEvent/replayEvent fall
+// back to the active page when absent.
 export type DiagramEvent =
-  | { type: "shape_created"; shape: Shape }
-  | { type: "shape_modified"; id: string; before: Partial<Shape>; after: Partial<Shape> }
-  | { type: "shape_deleted"; shape: Shape }
-  | { type: "edge_created"; edge: Edge }
-  | { type: "edge_modified"; id: string; before: Partial<Edge>; after: Partial<Edge> }
-  | { type: "edge_deleted"; edge: Edge }
-  | { type: "group_created"; group: Group }
-  | { type: "group_modified"; id: string; before: Partial<Group>; after: Partial<Group> }
-  | { type: "group_dissolved"; group: Group }
+  | { type: "shape_created"; shape: Shape; pageId?: string }
+  | { type: "shape_modified"; id: string; before: Partial<Shape>; after: Partial<Shape>; pageId?: string }
+  | { type: "shape_deleted"; shape: Shape; pageId?: string }
+  | { type: "edge_created"; edge: Edge; pageId?: string }
+  | { type: "edge_modified"; id: string; before: Partial<Edge>; after: Partial<Edge>; pageId?: string }
+  | { type: "edge_deleted"; edge: Edge; pageId?: string }
+  | { type: "group_created"; group: Group; pageId?: string }
+  | { type: "group_modified"; id: string; before: Partial<Group>; after: Partial<Group>; pageId?: string }
+  | { type: "group_dissolved"; group: Group; pageId?: string }
   | { type: "page_added"; page: Page }
   | { type: "page_removed"; page: Page }
   | { type: "layer_created"; layer: Layer; pageId: string }
   | { type: "layer_modified"; pageId: string; layerId: string; before: Partial<Layer>; after: Partial<Layer> }
   | { type: "flow_direction_changed"; pageId: string; before: string | undefined; after: string }
-  | { type: "title_changed"; before: string; after: string }
-  | { type: "checkpoint"; name: string; eventIndex: number };
-
-export interface EventLog {
-  events: DiagramEvent[];
-  cursor: number;
-  checkpoints: Map<string, number>;
-}
+  | { type: "title_changed"; before: string; after: string };
 
 // ── Parser ───────────────────────────────────────────────────
 

@@ -10,6 +10,7 @@ import { ReferenceRegistry } from "./reference-registry.js";
 import { NODE_TYPES, inferTypeFromLabel, computeDefaultSize } from "../lib/node-types.js";
 import { THEMES, isThemeName } from "../lib/themes.js";
 import { boundsOverlap, computePushVector, isDownstream } from "./spatial.js";
+import { reverseEventOnModel, replayEventOnModel } from "./apply-event.js";
 
 const DEFAULT_GAP = 60;
 const FIRST_SHAPE_POS = { x: 200, y: 200 };
@@ -167,7 +168,7 @@ export class DiagramModel {
       }
     }
 
-    this.emit({ type: "shape_created", shape });
+    this.emit({ type: "shape_created", shape, pageId: page.id });
     this.rebuildRegistry();
     return shape;
   }
@@ -189,7 +190,7 @@ export class DiagramModel {
     }
 
     shape.modifiedAt = nextSequence();
-    this.emit({ type: "shape_modified", id, before, after });
+    this.emit({ type: "shape_modified", id, before, after, pageId: page.id });
     this.rebuildRegistry();
     return shape;
   }
@@ -220,7 +221,7 @@ export class DiagramModel {
     }
 
     page.shapes.delete(id);
-    this.emit({ type: "shape_deleted", shape });
+    this.emit({ type: "shape_deleted", shape, pageId: page.id });
     this.rebuildRegistry();
     return shape;
   }
@@ -257,7 +258,7 @@ export class DiagramModel {
     };
 
     page.edges.set(edge.id, edge);
-    this.emit({ type: "edge_created", edge });
+    this.emit({ type: "edge_created", edge, pageId: page.id });
     this.rebuildRegistry();
     return edge;
   }
@@ -268,7 +269,7 @@ export class DiagramModel {
     if (!edge) return null;
 
     page.edges.delete(id);
-    this.emit({ type: "edge_deleted", edge });
+    this.emit({ type: "edge_deleted", edge, pageId: page.id });
     this.rebuildRegistry();
     return edge;
   }
@@ -290,7 +291,7 @@ export class DiagramModel {
     }
 
     edge.modifiedAt = nextSequence();
-    this.emit({ type: "edge_modified", id, before, after });
+    this.emit({ type: "edge_modified", id, before, after, pageId: page.id });
     return edge;
   }
 
@@ -330,7 +331,7 @@ export class DiagramModel {
 
     this.recomputeGroupBounds(group, page);
     page.groups.set(group.id, group);
-    this.emit({ type: "group_created", group });
+    this.emit({ type: "group_created", group, pageId: page.id });
     this.rebuildRegistry();
     return group;
   }
@@ -347,7 +348,7 @@ export class DiagramModel {
     }
 
     page.groups.delete(groupId);
-    this.emit({ type: "group_dissolved", group });
+    this.emit({ type: "group_dissolved", group, pageId: page.id });
     this.rebuildRegistry();
     return group;
   }
@@ -442,7 +443,7 @@ export class DiagramModel {
   undo(count: number = 1): DiagramEvent[] {
     const events = this.eventLog.undo(count);
     for (const event of events) {
-      this.reverseEvent(event);
+      reverseEventOnModel(event, this);
     }
     this.rebuildRegistry();
     return events;
@@ -452,7 +453,7 @@ export class DiagramModel {
     const events = this.eventLog.undoTo(checkpointName);
     if (!events) return null;
     for (const event of events) {
-      this.reverseEvent(event);
+      reverseEventOnModel(event, this);
     }
     this.rebuildRegistry();
     return events;
@@ -461,7 +462,7 @@ export class DiagramModel {
   redo(count: number = 1): DiagramEvent[] {
     const events = this.eventLog.redo(count);
     for (const event of events) {
-      this.replayEvent(event);
+      replayEventOnModel(event, this);
     }
     this.rebuildRegistry();
     return events;
@@ -693,6 +694,7 @@ export class DiagramModel {
       id: shapeId,
       before,
       after: { bounds: { ...shape.bounds } },
+      pageId: page.id,
     });
   }
 
@@ -735,6 +737,7 @@ export class DiagramModel {
           id,
           before,
           after: { bounds: { ...shape.bounds } },
+          pageId: page.id,
         });
         count++;
       }
@@ -752,6 +755,7 @@ export class DiagramModel {
           id,
           before,
           after: { waypoints: [...waypoints] },
+          pageId: page.id,
         });
       }
     }
@@ -891,161 +895,8 @@ export class DiagramModel {
     this.diagram.metadata.modified = new Date().toISOString();
   }
 
-  private reverseEvent(event: DiagramEvent): void {
-    const page = this.getActivePage();
-    switch (event.type) {
-      case "shape_created":
-        page.shapes.delete(event.shape.id);
-        break;
-      case "shape_deleted":
-        page.shapes.set(event.shape.id, { ...event.shape });
-        break;
-      case "shape_modified": {
-        const shape = page.shapes.get(event.id);
-        if (shape) Object.assign(shape, event.before);
-        break;
-      }
-      case "edge_created":
-        page.edges.delete(event.edge.id);
-        break;
-      case "edge_deleted":
-        page.edges.set(event.edge.id, { ...event.edge });
-        break;
-      case "edge_modified": {
-        const edge = page.edges.get(event.id);
-        if (edge) Object.assign(edge, event.before);
-        break;
-      }
-      case "group_created":
-        page.groups.delete(event.group.id);
-        for (const id of event.group.memberIds) {
-          const shape = page.shapes.get(id);
-          if (shape) shape.parentGroup = null;
-        }
-        break;
-      case "group_dissolved":
-        page.groups.set(event.group.id, {
-          ...event.group,
-          memberIds: new Set(event.group.memberIds),
-        });
-        for (const id of event.group.memberIds) {
-          const shape = page.shapes.get(id);
-          if (shape) shape.parentGroup = event.group.id;
-        }
-        break;
-      case "page_added": {
-        const idx = this.diagram.pages.findIndex((p) => p.id === event.page.id);
-        if (idx !== -1) this.diagram.pages.splice(idx, 1);
-        break;
-      }
-      case "page_removed":
-        this.diagram.pages.push(event.page);
-        break;
-      case "layer_created": {
-        const p = this.diagram.pages.find((pg) => pg.id === event.pageId);
-        if (p) {
-          const idx = p.layers.findIndex((l) => l.id === event.layer.id);
-          if (idx !== -1) p.layers.splice(idx, 1);
-        }
-        break;
-      }
-      case "layer_modified": {
-        const p = this.diagram.pages.find((pg) => pg.id === event.pageId);
-        if (p) {
-          const layer = p.layers.find((l) => l.id === event.layerId);
-          if (layer) Object.assign(layer, event.before);
-        }
-        break;
-      }
-      case "flow_direction_changed": {
-        const p = this.diagram.pages.find((pg) => pg.id === event.pageId);
-        if (p) p.flowDirection = event.before as import("../types/index.js").FlowDirection | undefined;
-        break;
-      }
-      case "title_changed":
-        this.diagram.title = event.before;
-        break;
-      case "checkpoint":
-        // No-op for undo
-        break;
-    }
-  }
-
-  private replayEvent(event: DiagramEvent): void {
-    const page = this.getActivePage();
-    switch (event.type) {
-      case "shape_created":
-        page.shapes.set(event.shape.id, { ...event.shape });
-        break;
-      case "shape_deleted":
-        page.shapes.delete(event.shape.id);
-        break;
-      case "shape_modified": {
-        const shape = page.shapes.get(event.id);
-        if (shape) Object.assign(shape, event.after);
-        break;
-      }
-      case "edge_created":
-        page.edges.set(event.edge.id, { ...event.edge });
-        break;
-      case "edge_deleted":
-        page.edges.delete(event.edge.id);
-        break;
-      case "edge_modified": {
-        const edge = page.edges.get(event.id);
-        if (edge) Object.assign(edge, event.after);
-        break;
-      }
-      case "group_created":
-        page.groups.set(event.group.id, {
-          ...event.group,
-          memberIds: new Set(event.group.memberIds),
-        });
-        for (const id of event.group.memberIds) {
-          const shape = page.shapes.get(id);
-          if (shape) shape.parentGroup = event.group.id;
-        }
-        break;
-      case "group_dissolved":
-        page.groups.delete(event.group.id);
-        for (const id of event.group.memberIds) {
-          const shape = page.shapes.get(id);
-          if (shape) shape.parentGroup = null;
-        }
-        break;
-      case "page_added":
-        this.diagram.pages.push(event.page);
-        break;
-      case "page_removed": {
-        const idx = this.diagram.pages.findIndex((p) => p.id === event.page.id);
-        if (idx !== -1) this.diagram.pages.splice(idx, 1);
-        break;
-      }
-      case "layer_created": {
-        const p = this.diagram.pages.find((pg) => pg.id === event.pageId);
-        if (p) p.layers.push({ ...event.layer });
-        break;
-      }
-      case "layer_modified": {
-        const p = this.diagram.pages.find((pg) => pg.id === event.pageId);
-        if (p) {
-          const layer = p.layers.find((l) => l.id === event.layerId);
-          if (layer) Object.assign(layer, event.after);
-        }
-        break;
-      }
-      case "flow_direction_changed": {
-        const p = this.diagram.pages.find((pg) => pg.id === event.pageId);
-        if (p) p.flowDirection = event.after as import("../types/index.js").FlowDirection;
-        break;
-      }
-      case "title_changed":
-        this.diagram.title = event.after;
-        break;
-      case "checkpoint":
-        break;
-    }
-  }
+  // Reverse/replay logic lives in ./apply-event.ts, shared with DrawioAdapter
+  // (which fcp-core's SessionDispatcher drives for `drawio_session` undo/redo).
 
   // ── Registry rebuild ─────────────────────────────────────
 

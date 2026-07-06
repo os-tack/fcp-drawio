@@ -1,11 +1,12 @@
 import type { FcpDomainAdapter, OpResult, QueryResult } from "@ostk-ai/fcp-core";
-import { EventLog } from "@ostk-ai/fcp-core";
+import type { EventLog } from "@ostk-ai/fcp-core";
 import type { ParsedOp } from "@ostk-ai/fcp-core";
-import type { Diagram, DiagramEvent } from "./types/index.js";
+import type { DiagramEvent } from "./types/index.js";
 import { DiagramModel } from "./model/diagram-model.js";
 import { IntentLayer } from "./server/intent-layer.js";
 import { serializeDiagram } from "./serialization/serialize.js";
 import { deserializeDiagram } from "./serialization/deserialize.js";
+import { reverseEventOnModel, replayEventOnModel } from "./model/apply-event.js";
 
 /**
  * Bridge between the generic fcp-core ParsedOp (Record<string, string> params,
@@ -16,6 +17,16 @@ import { deserializeDiagram } from "./serialization/deserialize.js";
  * (string -> local parseOp -> domain ParsedOp -> handler). Rather than
  * rewriting the entire IntentLayer, this adapter delegates to it via the
  * original string-based path while satisfying the FcpDomainAdapter interface.
+ *
+ * Undo/redo/checkpoint seam: fcp-core's createFcpServer() owns its own
+ * EventLog<DiagramEvent> and drives `drawio_session undo/redo/checkpoint`
+ * against it via SessionDispatcher, calling dispatchOp(op, model, log) with
+ * that log on every mutating op. DiagramModel keeps its own EventLog
+ * (model.eventLog) for every mutation it makes (used by the `checkpoint`
+ * verb and the `diff`/`history`/`status` queries). dispatchOp mirrors the
+ * events IntentLayer just produced in model.eventLog into the log fcp-core
+ * passed in, so both logs stay in lockstep and `drawio_session` undo/redo
+ * actually works against real mutations instead of an always-empty log.
  */
 export class DrawioAdapter implements FcpDomainAdapter<DiagramModel, DiagramEvent> {
   private intent: IntentLayer;
@@ -65,9 +76,21 @@ export class DrawioAdapter implements FcpDomainAdapter<DiagramModel, DiagramEven
    * Dispatch an operation. We use the raw string from the ParsedOp to feed
    * back through the existing IntentLayer pipeline, which has its own parser.
    * This avoids rewriting the entire IntentLayer to accept generic ParsedOps.
+   *
+   * IntentLayer mutates `model` and appends whatever events it produced to
+   * `model.eventLog` (DiagramModel's own log). fcp-core's SessionDispatcher
+   * only ever sees `log` (the EventLog passed in here) when computing undo/
+   * redo, so we mirror the delta over after the op runs — regardless of
+   * success, since a partially-applied op still leaves real mutations in
+   * model.eventLog that undo needs to be able to reverse.
    */
-  async dispatchOp(op: ParsedOp, _model: DiagramModel, _log: EventLog<DiagramEvent>): Promise<OpResult> {
-    return this.intent.executeSingleOp(op.raw);
+  async dispatchOp(op: ParsedOp, model: DiagramModel, log: EventLog<DiagramEvent>): Promise<OpResult> {
+    const cursorBefore = model.eventLog.cursor;
+    const result = await this.intent.executeSingleOp(op.raw);
+    for (const event of model.eventLog.eventsSince(cursorBefore)) {
+      log.append(event);
+    }
+    return result;
   }
 
   async dispatchQuery(query: string, _model: DiagramModel): Promise<string | QueryResult> {
@@ -82,168 +105,5 @@ export class DrawioAdapter implements FcpDomainAdapter<DiagramModel, DiagramEven
 
   replayEvent(event: DiagramEvent, model: DiagramModel): void {
     replayEventOnModel(event, model);
-  }
-}
-
-/**
- * Reverse a single event on the model (undo).
- * Extracted from DiagramModel.reverseEvent for use by the adapter.
- */
-function reverseEventOnModel(event: DiagramEvent, model: DiagramModel): void {
-  const page = model.getActivePage();
-  switch (event.type) {
-    case "shape_created":
-      page.shapes.delete(event.shape.id);
-      break;
-    case "shape_deleted":
-      page.shapes.set(event.shape.id, { ...event.shape });
-      break;
-    case "shape_modified": {
-      const shape = page.shapes.get(event.id);
-      if (shape) Object.assign(shape, event.before);
-      break;
-    }
-    case "edge_created":
-      page.edges.delete(event.edge.id);
-      break;
-    case "edge_deleted":
-      page.edges.set(event.edge.id, { ...event.edge });
-      break;
-    case "edge_modified": {
-      const edge = page.edges.get(event.id);
-      if (edge) Object.assign(edge, event.before);
-      break;
-    }
-    case "group_created":
-      page.groups.delete(event.group.id);
-      for (const id of event.group.memberIds) {
-        const shape = page.shapes.get(id);
-        if (shape) shape.parentGroup = null;
-      }
-      break;
-    case "group_dissolved":
-      page.groups.set(event.group.id, {
-        ...event.group,
-        memberIds: new Set(event.group.memberIds),
-      });
-      for (const id of event.group.memberIds) {
-        const shape = page.shapes.get(id);
-        if (shape) shape.parentGroup = event.group.id;
-      }
-      break;
-    case "page_added": {
-      const idx = model.diagram.pages.findIndex((p) => p.id === event.page.id);
-      if (idx !== -1) model.diagram.pages.splice(idx, 1);
-      break;
-    }
-    case "page_removed":
-      model.diagram.pages.push(event.page);
-      break;
-    case "layer_created": {
-      const p = model.diagram.pages.find((pg) => pg.id === event.pageId);
-      if (p) {
-        const idx = p.layers.findIndex((l) => l.id === event.layer.id);
-        if (idx !== -1) p.layers.splice(idx, 1);
-      }
-      break;
-    }
-    case "layer_modified": {
-      const p = model.diagram.pages.find((pg) => pg.id === event.pageId);
-      if (p) {
-        const layer = p.layers.find((l) => l.id === event.layerId);
-        if (layer) Object.assign(layer, event.before);
-      }
-      break;
-    }
-    case "flow_direction_changed": {
-      const p = model.diagram.pages.find((pg) => pg.id === event.pageId);
-      if (p) p.flowDirection = event.before as import("./types/index.js").FlowDirection | undefined;
-      break;
-    }
-    case "title_changed":
-      model.diagram.title = event.before;
-      break;
-    case "checkpoint":
-      break;
-  }
-}
-
-/**
- * Replay a single event on the model (redo).
- * Extracted from DiagramModel.replayEvent for use by the adapter.
- */
-function replayEventOnModel(event: DiagramEvent, model: DiagramModel): void {
-  const page = model.getActivePage();
-  switch (event.type) {
-    case "shape_created":
-      page.shapes.set(event.shape.id, { ...event.shape });
-      break;
-    case "shape_deleted":
-      page.shapes.delete(event.shape.id);
-      break;
-    case "shape_modified": {
-      const shape = page.shapes.get(event.id);
-      if (shape) Object.assign(shape, event.after);
-      break;
-    }
-    case "edge_created":
-      page.edges.set(event.edge.id, { ...event.edge });
-      break;
-    case "edge_deleted":
-      page.edges.delete(event.edge.id);
-      break;
-    case "edge_modified": {
-      const edge = page.edges.get(event.id);
-      if (edge) Object.assign(edge, event.after);
-      break;
-    }
-    case "group_created":
-      page.groups.set(event.group.id, {
-        ...event.group,
-        memberIds: new Set(event.group.memberIds),
-      });
-      for (const id of event.group.memberIds) {
-        const shape = page.shapes.get(id);
-        if (shape) shape.parentGroup = event.group.id;
-      }
-      break;
-    case "group_dissolved":
-      page.groups.delete(event.group.id);
-      for (const id of event.group.memberIds) {
-        const shape = page.shapes.get(id);
-        if (shape) shape.parentGroup = null;
-      }
-      break;
-    case "page_added":
-      model.diagram.pages.push(event.page);
-      break;
-    case "page_removed": {
-      const idx = model.diagram.pages.findIndex((p) => p.id === event.page.id);
-      if (idx !== -1) model.diagram.pages.splice(idx, 1);
-      break;
-    }
-    case "layer_created": {
-      const p = model.diagram.pages.find((pg) => pg.id === event.pageId);
-      if (p) p.layers.push({ ...event.layer });
-      break;
-    }
-    case "layer_modified": {
-      const p = model.diagram.pages.find((pg) => pg.id === event.pageId);
-      if (p) {
-        const layer = p.layers.find((l) => l.id === event.layerId);
-        if (layer) Object.assign(layer, event.after);
-      }
-      break;
-    }
-    case "flow_direction_changed": {
-      const p = model.diagram.pages.find((pg) => pg.id === event.pageId);
-      if (p) p.flowDirection = event.after as import("./types/index.js").FlowDirection;
-      break;
-    }
-    case "title_changed":
-      model.diagram.title = event.after;
-      break;
-    case "checkpoint":
-      break;
   }
 }

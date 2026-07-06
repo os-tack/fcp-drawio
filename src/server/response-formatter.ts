@@ -219,7 +219,6 @@ export function formatHistory(events: import("../types/index.js").DiagramEvent[]
       case "group_dissolved": return `!ungroup ${e.group.name}`;
       case "page_added": return `+page ${e.page.name}`;
       case "page_removed": return `-page ${e.page.name}`;
-      case "checkpoint": return `checkpoint "${e.name}"`;
     }
   }).join("\n");
 }
