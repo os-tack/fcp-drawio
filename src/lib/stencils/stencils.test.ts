@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseOp, isParseError } from "../../parser/parse-op.js";
 import { IntentLayer } from "../../server/intent-layer.js";
-import { getModelMap } from "../../server/model-map.js";
 import { buildShapeStyleString } from "../../serialization/serialize.js";
 import { serializeDiagram } from "../../serialization/serialize.js";
 import { deserializeDiagram } from "../../serialization/deserialize.js";
@@ -239,40 +238,5 @@ describe("stencil serialization", () => {
     const shape = [...page.shapes.values()].find(s => s.label === "MyFunc");
     expect(shape).toBeDefined();
     expect(shape!.baseStyleOverride).toContain("mxgraph.aws4");
-  });
-});
-
-// ── Model Map (help text) ────────────────────────────────
-
-describe("model-map stencil sections", () => {
-  it("always shows STENCILS section with load instructions", () => {
-    const help = getModelMap(new Map(), new Map(), new Set());
-    expect(help).toContain("STENCILS:");
-    expect(help).toContain("load list");
-    expect(help).toContain("load PACK");
-  });
-
-  it("shows loaded pack details", () => {
-    const loaded = new Set(["aws"]);
-    const help = getModelMap(new Map(), new Map(), loaded);
-    expect(help).toContain("STENCILS (aws):");
-    expect(help).toContain("lambda");
-    expect(help).toContain("s3");
-    expect(help).toContain("Compute:");
-  });
-
-  it("does not show pack details if not loaded", () => {
-    const help = getModelMap(new Map(), new Map(), new Set());
-    expect(help).not.toContain("STENCILS (aws):");
-    // The base help mentions "lambda" in the load example, but the pack detail section should not appear
-    expect(help).not.toContain("Compute:      lambda");
-  });
-
-  it("shows multiple loaded packs", () => {
-    const loaded = new Set(["aws", "k8s"]);
-    const help = getModelMap(new Map(), new Map(), loaded);
-    expect(help).toContain("STENCILS (aws):");
-    expect(help).toContain("STENCILS (k8s):");
-    expect(help).toContain("pod");
   });
 });

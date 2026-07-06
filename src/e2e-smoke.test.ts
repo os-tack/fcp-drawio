@@ -261,7 +261,7 @@ describe("E2E Smoke — multi-page", async () => {
 // ── Scenario 5: Custom types ─────────────────────────────────
 
 describe("E2E Smoke — custom types", async () => {
-  it("defines and uses custom type, visible in help", async () => {
+  it("defines and uses custom type", async () => {
     const { intent } = makeServer();
     intent.executeSession('new "Custom Type Test"');
 
@@ -276,11 +276,6 @@ describe("E2E Smoke — custom types", async () => {
 
     const list = intent.executeQuery("list");
     expect(list).toContain("OrderEvents");
-
-    // Help includes custom type
-    const help = intent.getHelp();
-    expect(help).toContain("kafka-stream");
-    expect(help).toContain("CUSTOM TYPES");
   });
 });
 

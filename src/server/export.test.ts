@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { detectDrawioCLI } from "../lib/drawio-cli.js";
 import { IntentLayer } from "./intent-layer.js";
-import { getModelMap } from "./model-map.js";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { existsSync, unlinkSync } from "node:fs";
@@ -135,14 +134,5 @@ describe("snapshot query removed", () => {
     const result = intent.executeQuery("export");
     expect(typeof result).toBe("string");
     expect(result as string).toContain("Unknown query command");
-  });
-});
-
-describe("model-map shows EXPORT", () => {
-  it("shows EXPORT in OPERATIONS section", () => {
-    const help = getModelMap(new Map());
-    expect(help).toContain("EXPORT\n");
-    expect(help).toContain("export");
-    expect(help).not.toContain("SNAPSHOT\n");
   });
 });

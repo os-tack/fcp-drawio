@@ -7,7 +7,6 @@ import { parseOp, isParseError } from "../parser/parse-op.js";
 import { resolveRef } from "../parser/resolve-ref.js";
 import { isShapeType, inferTypeFromLabel, computeDefaultSize } from "../lib/node-types.js";
 import { isThemeName, resolveColor, THEMES } from "../lib/themes.js";
-import { getModelMap } from "./model-map.js";
 import {
   formatShapeCreated, formatEdgeCreated, formatShapeModified,
   formatShapeDeleted, formatGroupCreated,
@@ -128,14 +127,6 @@ export class IntentLayer {
     } catch (err: unknown) {
       return `Error: ${err instanceof Error ? err.message : String(err)}`;
     }
-  }
-
-  getHelp(): string {
-    return getModelMap(
-      this.model.diagram.customTypes,
-      this.model.diagram.customThemes,
-      this.model.diagram.loadedStencilPacks,
-    );
   }
 
   // ── Single op execution ────────────────────────────────

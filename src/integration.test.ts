@@ -249,11 +249,6 @@ describe("Integration — custom types", async () => {
 
     const list = intent.executeQuery("list");
     expect(list).toContain("OrderPayment");
-
-    // Help includes custom type
-    const help = intent.getHelp();
-    expect(help).toContain("payment-svc");
-    expect(help).toContain("CUSTOM TYPES");
   });
 });
 

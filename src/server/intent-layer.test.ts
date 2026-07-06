@@ -453,13 +453,6 @@ describe("IntentLayer — define custom type", async () => {
     expect(shape.metadata.badges!.length).toBe(1);
     expect(shape.metadata.badges![0].text).toBe("PCI");
   });
-
-  it("includes custom types in help output", async () => {
-    await layer.executeOps(["define my-svc base:svc theme:green"]);
-    const help = layer.getHelp();
-    expect(help).toContain("CUSTOM TYPES:");
-    expect(help).toContain("my-svc");
-  });
 });
 
 describe("IntentLayer — define custom theme", async () => {
@@ -473,15 +466,6 @@ describe("IntentLayer — define custom theme", async () => {
     expect(layer.model.diagram.customThemes.size).toBe(1);
   });
 
-  it("includes custom themes in help output", async () => {
-    await layer.executeOps([
-      "define theme critical fill:#f8cecc stroke:#990000",
-    ]);
-    const help = layer.getHelp();
-    expect(help).toContain("CUSTOM THEMES:");
-    expect(help).toContain("critical");
-  });
-
   it("custom theme is usable in style operations", async () => {
     await layer.executeOps([
       "define theme critical fill:#f8cecc stroke:#990000",
@@ -490,25 +474,6 @@ describe("IntentLayer — define custom theme", async () => {
     const shape = [...layer.model.getActivePage().shapes.values()][0];
     expect(shape.style.fillColor).toBe("#f8cecc");
     expect(shape.style.strokeColor).toBe("#990000");
-  });
-});
-
-describe("IntentLayer — model-map generation", async () => {
-  it("generates NODE TYPES from registry", () => {
-    const help = layer.getHelp();
-    expect(help).toContain("NODE TYPES:");
-    expect(help).toContain("svc");
-    expect(help).toContain("db");
-    expect(help).toContain("api");
-    expect(help).toContain("rounded rectangle");
-    expect(help).toContain("cylinder");
-  });
-
-  it("generates THEMES from registry", () => {
-    const help = layer.getHelp();
-    expect(help).toContain("THEMES (fill / stroke):");
-    expect(help).toContain("#dae8fc");
-    expect(help).toContain("#6c8ebf");
   });
 });
 
