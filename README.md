@@ -115,7 +115,7 @@ See [`docs/examples/`](docs/examples/) for example diagrams (including the [mult
 ```bash
 npm install
 npm run build     # tsc
-npm test          # vitest, 497 tests
+npm test          # vitest, 498 tests
 npm run test:watch
 npm run dev       # tsc --watch
 ```

@@ -106,6 +106,46 @@ describe("MCP tool handlers — production session wiring", () => {
     expect(text(listed)).toContain("UserDB");
   });
 
+  it("drawio_session undo to: finds a checkpoint created via the op-level `checkpoint` verb", async () => {
+    client = await connectedClient();
+
+    await client.callTool({ name: "drawio_session", arguments: { action: 'new "Mixed Checkpoint Test"' } });
+    await client.callTool({ name: "drawio", arguments: { ops: ["add svc AuthService"] } });
+
+    // Checkpoint created through the `drawio` tool's op-level `checkpoint`
+    // verb, not through `drawio_session checkpoint`.
+    const checkpointResult = await client.callTool({
+      name: "drawio",
+      arguments: { ops: ["checkpoint v1"] },
+    });
+    expect(text(checkpointResult)).toContain('checkpoint "v1" created');
+
+    await client.callTool({
+      name: "drawio",
+      arguments: { ops: ["add db UserDB", "connect AuthService -> UserDB"] },
+    });
+
+    let listed = await client.callTool({ name: "drawio_query", arguments: { q: "list" } });
+    expect(text(listed)).toContain("UserDB");
+
+    const undoToResult = await client.callTool({
+      name: "drawio_session",
+      arguments: { action: "undo to:v1" },
+    });
+    expect(text(undoToResult)).not.toContain("cannot undo");
+    expect(text(undoToResult)).toContain('checkpoint "v1"');
+
+    listed = await client.callTool({ name: "drawio_query", arguments: { q: "list" } });
+    expect(text(listed)).toContain("AuthService");
+    expect(text(listed)).not.toContain("UserDB");
+
+    const redoResult = await client.callTool({ name: "drawio_session", arguments: { action: "redo" } });
+    expect(text(redoResult)).toContain("redone");
+
+    listed = await client.callTool({ name: "drawio_query", arguments: { q: "list" } });
+    expect(text(listed)).toContain("UserDB");
+  });
+
   it("drawio_session reports nothing to undo/redo on a fresh diagram", async () => {
     client = await connectedClient();
 

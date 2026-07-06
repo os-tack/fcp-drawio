@@ -27,6 +27,14 @@ import { reverseEventOnModel, replayEventOnModel } from "./model/apply-event.js"
  * events IntentLayer just produced in model.eventLog into the log fcp-core
  * passed in, so both logs stay in lockstep and `drawio_session` undo/redo
  * actually works against real mutations instead of an always-empty log.
+ *
+ * There are two ways to create a named checkpoint: `drawio_session
+ * checkpoint NAME` (a session action, handled entirely by SessionDispatcher
+ * against its own log) and `drawio checkpoint NAME` (an op, handled by
+ * IntentLayer/DiagramModel against model.eventLog, documented as "for
+ * undo"). dispatchOp also registers the latter on fcp-core's log, at the
+ * same cursor position the mirrored events land at, so `drawio_session
+ * undo to:NAME` finds checkpoints created either way.
  */
 export class DrawioAdapter implements FcpDomainAdapter<DiagramModel, DiagramEvent> {
   private intent: IntentLayer;
@@ -83,12 +91,22 @@ export class DrawioAdapter implements FcpDomainAdapter<DiagramModel, DiagramEven
    * redo, so we mirror the delta over after the op runs — regardless of
    * success, since a partially-applied op still leaves real mutations in
    * model.eventLog that undo needs to be able to reverse.
+   *
+   * The op-level `checkpoint NAME` verb doesn't mutate the model (no events
+   * to mirror), it just marks a name in model.eventLog for the `diff`/`history`
+   * queries. We additionally register that same name in `log` so `drawio_session
+   * undo to:NAME` can find checkpoints created via either `drawio checkpoint`
+   * or `drawio_session checkpoint`.
    */
   async dispatchOp(op: ParsedOp, model: DiagramModel, log: EventLog<DiagramEvent>): Promise<OpResult> {
     const cursorBefore = model.eventLog.cursor;
     const result = await this.intent.executeSingleOp(op.raw);
     for (const event of model.eventLog.eventsSince(cursorBefore)) {
       log.append(event);
+    }
+    if (op.verb === "checkpoint" && result.success) {
+      const name = op.positionals[0];
+      if (name) log.checkpoint(name);
     }
     return result;
   }
