@@ -4,7 +4,7 @@ MCP server for creating and editing draw.io diagrams through intent-level comman
 
 ## What It Does
 
-fcp-drawio lets LLMs build architecture diagrams, flowcharts, and system maps by describing what they want -- not how to draw it. The LLM sends high-level operations like `add svc AuthService theme:blue` and `connect AuthService -> UserDB`, and fcp-drawio renders them into fully styled draw.io XML with automatic layout via ELK. Built on the [FCP](https://github.com/os-tack/fcp) framework.
+fcp-drawio lets LLMs build architecture diagrams, flowcharts, and system maps by describing what they want -- not how to draw it. The LLM sends high-level operations like `add svc AuthService theme:blue` and `connect AuthService -> UserDB`, and fcp-drawio renders them into fully styled draw.io XML, positioning shapes with `near:`/`dir:` heuristics and collision avoidance by default -- or hands off to an ELK auto-layout pass on demand via the `layout` op. Built on the [FCP](https://github.com/os-tack/fcp) framework.
 
 <p align="center">
   <img src="docs/images/multiplayer-game-backend.png" alt="Multiplayer Game Backend architecture diagram" width="700">
@@ -95,8 +95,9 @@ MCP Server (Intent Layer)
 Semantic Model (Domain Brain)
   src/model/ -- In-memory entity graph, event sourcing
         |
-Layout (ELK)
-  Auto-layout via elkjs -- flow:TB, flow:LR, near/dir positioning
+Layout
+  Default: near/dir positioning heuristics + collision-pushing
+  On demand: `layout` op runs elkjs (layered/force/tree, flow:TB/LR/BT/RL)
         |
 Serialization (XML)
   src/serialization/ -- Semantic model <-> mxGraphModel XML
@@ -114,7 +115,7 @@ See [`docs/examples/`](docs/examples/) for example diagrams (including the [mult
 ```bash
 npm install
 npm run build     # tsc
-npm test          # vitest, 465 tests
+npm test          # vitest, 497 tests
 npm run test:watch
 npm run dev       # tsc --watch
 ```
